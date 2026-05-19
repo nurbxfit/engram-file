@@ -23,7 +23,7 @@ REPO_BASE = "https://raw.githubusercontent.com/nurbxfit/engram-file/main"
 
 # Paths the CLI can bootstrap when they don't exist in the target project
 BOOTSTRAP_SOURCES = {
-    ".agents/skills/memory.md": f"{REPO_BASE}/.agents/skills/memory.md",
+    ".agents/skills/engram/SKILL.md": f"{REPO_BASE}/.agents/skills/engram/SKILL.md",
 }
 
 SCHEMA = {
