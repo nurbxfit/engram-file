@@ -5,16 +5,26 @@ import argparse
 import json
 import os
 import sys
+import urllib.request
 from datetime import date
 from pathlib import Path
 
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+# Project root = CWD by default. Override via --root or ENGRAM_PROJECT_ROOT env.
+# The script can live anywhere — CWD is always the target project directory.
+PROJECT_ROOT = Path(os.environ.get("ENGRAM_PROJECT_ROOT", os.getcwd()))
 MEMORY_DIR = PROJECT_ROOT / "memory"
 INDEX_PATH = MEMORY_DIR / "index.jsonl"
 ARCHIVE_PATH = MEMORY_DIR / "archive.jsonl"
 DETAILS_DIR = MEMORY_DIR / "details"
 BY_MODULE_DIR = MEMORY_DIR / "by-module"
+
+REPO_BASE = "https://raw.githubusercontent.com/nurbxfit/engram-file/main"
+
+# Paths the CLI can bootstrap when they don't exist in the target project
+BOOTSTRAP_SOURCES = {
+    ".agents/skills/memory.md": f"{REPO_BASE}/.agents/skills/memory.md",
+}
 
 SCHEMA = {
     "required": ["ts", "type", "topic", "tags", "note", "status"],
@@ -32,6 +42,16 @@ def _generate_id(entry: dict) -> str:
     slug = entry.get("topic", "unknown").replace(" ", "-").lower()
     ts_short = entry.get("ts", _now()).replace("-", "")
     return f"{slug}-{ts_short}"
+
+
+def _download_text(url: str) -> str:
+    """Download a URL and return its body as text. Exits on failure."""
+    try:
+        with urllib.request.urlopen(url, timeout=15) as r:
+            return r.read().decode("utf-8")
+    except Exception as e:
+        print(f"✖  Failed to download {url}: {e}", file=sys.stderr)
+        sys.exit(1)
 
 
 def _read_jsonl(path: Path) -> list[dict]:
@@ -247,10 +267,22 @@ def cmd_validate(args):
     print("All checks passed.")
 
 
+def _ensure_dir(path: Path):
+    if not path.exists():
+        path.mkdir(parents=True)
+        print(f"✓  Created {path}/")
+
+
 def cmd_init(args):
     if INDEX_PATH.exists() and INDEX_PATH.stat().st_size > 0 and not args.force:
         print("✖  index.jsonl already has content. Use --force to overwrite.", file=sys.stderr)
         sys.exit(1)
+
+    _ensure_dir(MEMORY_DIR)
+    _ensure_dir(DETAILS_DIR)
+    _ensure_dir(BY_MODULE_DIR)
+    for module in ("auth", "db", "api"):
+        _ensure_dir(DETAILS_DIR / module)
 
     init_entry = {
         "ts": _now(),
@@ -266,6 +298,19 @@ def cmd_init(args):
     }
     _write_jsonl(INDEX_PATH, [init_entry])
     print(f"✓  Initialized index.jsonl.")
+
+    if args.pull_skills:
+        print()
+        for rel_path, url in BOOTSTRAP_SOURCES.items():
+            target = PROJECT_ROOT / rel_path
+            if target.exists():
+                print(f"•  {rel_path} already exists, skipping")
+                continue
+            text = _download_text(url)
+            _ensure_dir(target.parent)
+            with open(target, "w") as f:
+                f.write(text)
+            print(f"✓  Downloaded {rel_path}")
 
 
 def cmd_sync_views(args):
@@ -293,6 +338,16 @@ def cmd_sync_views(args):
         print(f"     {module}/ — {count} entr{'y' if count == 1 else 'ies'}")
 
 
+def _resolve_root(args) -> Path:
+    explicit = getattr(args, "root", None)
+    if explicit:
+        return Path(explicit).resolve()
+    env = os.environ.get("ENGRAM_PROJECT_ROOT")
+    if env:
+        return Path(env).resolve()
+    return Path.cwd()
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Engram — file-based memory store CLI.",
@@ -303,13 +358,14 @@ def main():
             "  archive     Move a superseded entry to archive.jsonl\n"
             "  digest      Print a session-start digest of relevant active entries\n"
             "  validate    Check index.jsonl and archive.jsonl for schema errors\n"
-            "  init        Seed index.jsonl with the memory system self-reference\n"
+            "  init        Scaffold memory/ directory and seed index.jsonl\n"
             "  sync-views  Regenerate by-module/ views from the index\n"
             "\n"
             "Read/writes the project's memory/ directory. Python stdlib only — no dependencies."
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
+    parser.add_argument("--root", default=None, help="Project root dir (default: CWD, env: ENGRAM_PROJECT_ROOT)")
     sub = parser.add_subparsers(dest="command", required=True)
 
     p_add = sub.add_parser("add", help="Add a new memory entry")
@@ -340,12 +396,22 @@ def main():
 
     sub.add_parser("validate", help="Check index and archive for schema errors")
 
-    p_i = sub.add_parser("init", help="Seed index.jsonl with self-reference entry")
+    p_i = sub.add_parser("init", help="Scaffold memory/ directory and seed index.jsonl")
     p_i.add_argument("--force", "-f", action="store_true", help="Overwrite existing content")
+    p_i.add_argument("--pull-skills", action="store_true", help="Download latest .agents/skills/ from GitHub")
 
     sub.add_parser("sync-views", help="Regenerate by-module/ views from the index")
 
     args = parser.parse_args()
+
+    # Resolve project root and set module-level paths
+    global PROJECT_ROOT, MEMORY_DIR, INDEX_PATH, ARCHIVE_PATH, DETAILS_DIR, BY_MODULE_DIR
+    PROJECT_ROOT = _resolve_root(args)
+    MEMORY_DIR = PROJECT_ROOT / "memory"
+    INDEX_PATH = MEMORY_DIR / "index.jsonl"
+    ARCHIVE_PATH = MEMORY_DIR / "archive.jsonl"
+    DETAILS_DIR = MEMORY_DIR / "details"
+    BY_MODULE_DIR = MEMORY_DIR / "by-module"
 
     commands = {
         "add": cmd_add,
