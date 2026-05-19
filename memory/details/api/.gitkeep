@@ -1,0 +1,4 @@
+# details/api/
+
+Detail markdown files for API-related memory entries.
+Convention: `<topic>-<subtopic>-<type>.md`
