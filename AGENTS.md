@@ -3,7 +3,7 @@ This file contains behavioral rules for AI agents.
 
 ## Memory System
 This project uses a file-based memory system.
-- Read `.agents/skills/memory.md` for behavior instructions.
+- Read `.agents/skills/engram/SKILL.md` for behavior instructions.
 - Read `memory/index.jsonl` at session start for active entries.
 - Run `python scripts/engram.py digest` for a task-relevant memory summary.
 - Use `python scripts/engram.py add` to save new entries (validated automatically).

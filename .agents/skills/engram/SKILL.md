@@ -1,3 +1,8 @@
+---
+name: memory
+description: "Two-layer file-based memory store for AI agents. Query, add, archive, and manage persistent memory entries across sessions. Includes CLI tooling for structured entry management with schema validation."
+---
+
 # Memory System - How It Works
 
 ## Bootstrap
@@ -14,7 +19,7 @@ The skill is loaded but the project might not have the CLI or memory directory y
    ```
    python scripts/engram.py init --pull-skills
    ```
-   (`--pull-skills` ensures this skill file is also downloaded, so it stays up to date.)
+   (`--pull-skills` ensures the latest skill file is also downloaded, so it stays up to date.)
 
 **If you cloned the repo from GitHub**:
 You already have everything. Run `python scripts/engram.py init` to seed the index.
@@ -30,7 +35,8 @@ A two-layer file-based Memory System at the project root.
 project/
 ├── .agents/
 │   └── skills/
-│       └── memory.md              ← this file (behavior instructions)
+│       └── engram/
+│           └── SKILL.md           ← this file (behavior instructions)
 ├── AGENTS.md                      ← bootstrap (read first)
 ├── memory/
 │   ├── index.jsonl                ← active entries (read all at session start)
