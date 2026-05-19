@@ -1,5 +1,24 @@
 # Memory System - How It Works
 
+## Bootstrap
+
+**If you got here via `npx skills add nurbxfit/engram-file`**:
+The skill is loaded but the project might not have the CLI or memory directory yet.
+
+1. If `scripts/engram.py` does not exist, download it:
+   ```
+   curl -fsSL https://raw.githubusercontent.com/nurbxfit/engram-file/main/scripts/engram.py -o scripts/engram.py
+   chmod +x scripts/engram.py
+   ```
+2. Run the CLI to scaffold the memory directory and seed the index:
+   ```
+   python scripts/engram.py init --pull-skills
+   ```
+   (`--pull-skills` ensures this skill file is also downloaded, so it stays up to date.)
+
+**If you cloned the repo from GitHub**:
+You already have everything. Run `python scripts/engram.py init` to seed the index.
+
 ## What Is It
 A two-layer file-based Memory System at the project root.
 - `memory/index.jsonl` is the index — fast, scannable, low token cost.
